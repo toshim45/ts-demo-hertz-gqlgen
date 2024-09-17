@@ -6,8 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 
@@ -15,7 +16,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/executor"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/lru"
-	"github.com/99designs/gqlgen/graphql/handler/transport"
+	// "github.com/99designs/gqlgen/graphql/handler/transport"
 )
 
 type (
@@ -31,16 +32,10 @@ func New(es graphql.ExecutableSchema) *Server {
 	}
 }
 
-func NewDefaultServer(es graphql.ExecutableSchema) *Server {
+func NewHertzHandler(es graphql.ExecutableSchema) *Server {
 	srv := New(es)
 
-	srv.AddTransport(transport.Websocket{
-		KeepAlivePingInterval: 10 * time.Second,
-	})
-	srv.AddTransport(transport.Options{})
-	srv.AddTransport(transport.GET{})
-	srv.AddTransport(transport.POST{})
-	srv.AddTransport(transport.MultipartForm{})
+	// srv.AddTransport(HertzPOST{})
 
 	srv.SetQueryCache(lru.New[*ast.QueryDocument](1000))
 
@@ -48,7 +43,6 @@ func NewDefaultServer(es graphql.ExecutableSchema) *Server {
 	srv.Use(extension.AutomaticPersistedQuery{
 		Cache: lru.New[string](100),
 	})
-
 	return srv
 }
 
@@ -103,6 +97,22 @@ func (s *Server) getTransport(r *http.Request) graphql.Transport {
 		}
 	}
 	return nil
+}
+
+func (s *Server) ServeHertzHTTP(c context.Context, r *app.RequestContext) {
+	defer func() {
+		if err := recover(); err != nil {
+			err := s.exec.PresentRecoveredError(c, err)
+			gqlErr, _ := err.(*gqlerror.Error)
+			resp := &graphql.Response{Errors: []*gqlerror.Error{gqlErr}}
+			r.JSON(consts.StatusUnprocessableEntity, resp)
+		}
+	}()
+
+	c = graphql.StartOperationTrace(c)
+
+	t := HertzPOST{}
+	t.Do(c, r, s.exec)
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -190,4 +200,29 @@ func (f FieldFunc) Validate(schema graphql.ExecutableSchema) error {
 
 func (f FieldFunc) InterceptField(ctx context.Context, next graphql.Resolver) (res any, err error) {
 	return f(ctx, next)
+}
+
+type DummyResponse struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type HertzPOST struct{}
+
+func (h HertzPOST) Do(c context.Context, r *app.RequestContext, exec graphql.GraphExecutor) {
+	params := &graphql.RawParams{}
+	start := graphql.Now()
+	// params.Headers = r.Request.Header
+	params.ReadTime = graphql.TraceTiming{
+		Start: start,
+		End:   graphql.Now(),
+	}
+
+	if err := r.BindJSON(&params); err != nil {
+		gqlErr := gqlerror.Errorf("could not get json from request body: %+v", err)
+		resp := exec.DispatchError(c, gqlerror.List{gqlErr})
+		r.JSON(consts.StatusBadRequest, resp)
+	}
+
+	r.JSON(consts.StatusOK, DummyResponse{ID: "id-1", Name: "name-1"})
 }

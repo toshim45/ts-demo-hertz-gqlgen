@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"log"
-	"net/http"
+	// "log"
+	// "net/http"
 	"os"
 
-	"github.com/99designs/gqlgen/graphql/playground"
+	// "github.com/99designs/gqlgen/graphql/playground"
 	"github.com/toshim45/demo-hertz-gqlgen/graph"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -22,10 +22,7 @@ func main() {
 		port = defaultPort
 	}
 
-	srv := graph.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{}}))
-
-	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	http.Handle("/query", srv)
+	_ = graph.NewHertzHandler(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{}}))
 
 	h := server.Default()
 	h.GET("/ping", func(ctx context.Context, c *app.RequestContext) {
@@ -33,9 +30,12 @@ func main() {
 		c.String(consts.StatusOK, "Pong!!! "+q)
 	})
 
-	go h.Spin()
-	log.Println("hertz spinned up!!")
+	h.Spin()
+	// log.Println("hertz spinned up!!")
 
-	log.Printf("connect to http://localhost:%s/ for GraphQL playground\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	// http.Handle("/", playground.Handler("GraphQL playground", "/query"))
+	// http.Handle("/query", srv)
+
+	// log.Printf("connect to http://localhost:%s/ for GraphQL playground\n", port)
+	// log.Fatal(http.ListenAndServe(":"+port, nil))
 }

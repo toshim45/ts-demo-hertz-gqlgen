@@ -1,8 +1,10 @@
 help:
-	@echo "HELP: make clean|build|run"
+	@echo "HELP: make clean|gqlgen|build|run"
 clean:
 	@echo "cleaning"
 	rm -rfv binary
+gqlgen:
+	go run github.com/99designs/gqlgen generate
 build: clean
 	@echo "building"
 	go mod tidy

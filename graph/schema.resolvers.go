@@ -17,8 +17,12 @@ func (r *mutationResolver) CreateTodo(ctx context.Context, input model.NewTodo) 
 }
 
 // Todos is the resolver for the todos field.
-func (r *queryResolver) Todos(ctx context.Context) ([]*model.Todo, error) {
-	fmt.Println("not implemented: ListTodo")
+func (r *queryResolver) Todos(ctx context.Context, limit *int) ([]*model.Todo, error) {
+	var limitVal int
+	if limit != nil {
+		limitVal = *limit
+	}
+	fmt.Println("not implemented: ListTodo", limitVal)
 	result := []*model.Todo{}
 	return result, nil
 }

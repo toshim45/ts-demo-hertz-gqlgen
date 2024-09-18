@@ -1,7 +1,3 @@
-# GraphQL schema example
-#
-# https://gqlgen.com/getting-started/
-
 type Todo {
   id: ID!
   text: String!
@@ -15,7 +11,7 @@ type User {
 }
 
 type Query {
-  todos: [Todo!]!
+  todos(limit: Int): [Todo!]!
 }
 
 input NewTodo {

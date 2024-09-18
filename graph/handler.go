@@ -21,6 +21,8 @@ type (
 		transports []graphql.Transport
 		exec       *executor.Executor
 	}
+
+	POST struct{}
 )
 
 func New(es graphql.ExecutableSchema) *Server {
@@ -63,8 +65,6 @@ func (s *Server) ServeHTTP(c context.Context, r *app.RequestContext) {
 
 	POST{}.Do(c, r, s.exec)
 }
-
-type POST struct{}
 
 func statusFor(errs gqlerror.List) int {
 	switch errcode.GetErrorKind(errs) {
